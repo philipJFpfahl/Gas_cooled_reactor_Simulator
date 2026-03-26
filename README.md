@@ -137,4 +137,4 @@ $$
 \eta = 0.5 (1-\frac{T_c}{T_h})
 $$
 
-In this case $T_c = T_{Bin}$ and $T_h = T_{Bout}$
+In this case $T_c = T_{B}$ and $T_h = T_{Bout}$.
