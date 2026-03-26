@@ -131,5 +131,10 @@ $$
 
 # Turbine
 
-We assume that the efficiency is 50% of the Carnot efficiency
+We assume that the efficiency is 50% of the Carnot efficiency, with the final heat sink temperature of $293.15$ K.
 
+$$
+\eta = 0.5 (1-\frac{T_c}{T_h})
+$$
+
+In this case $T_c = T_{Bin}$ and $T_h = T_{Bout}$
