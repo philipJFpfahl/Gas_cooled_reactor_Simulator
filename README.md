@@ -11,10 +11,14 @@ An extra battery model is added.
 
 And the turbine side is simplified. 
 
-![[Pasted image 20260325160529.png]]
+![[Pasted image 20260325160529.png|682]]
 # Reactor
+![[Pasted image 20260326094400.png]]
 
+The core volume is $7\times 10 ^6$ cm$³$.
+ 
 ## Reactor Kinetics
+
 
 The power of the reactor is modeled with the PKE:
 
@@ -70,9 +74,24 @@ $$
 \frac{d Xe(t)}{dt} = \gamma_X \Sigma_f \Phi +\lambda_i I(t) - \lambda_x Xe(t)- \sigma_a^X \Phi Xe(t)
 $$
 
+| $\beta$ | $\beta_1$ | $\beta_2$ | $\beta_3$ | $\beta_4$ | $\beta_5$ | $\beta_6$ | $\Lambda$ |     
+| ------- | --------- | --------- | --------- | --------- | --------- | --------- | --------- | 
+| 670.1   | 23.44     | 121       | 115       | 258.8     | 107       | 44.86     | 0.000432  |
+
+
+| $\lambda_1$ | $\lambda_2$ | $\lambda_3$ | $\lambda_4$ | $\lambda_5$ | $\lambda_6$ | $\alpha$ |
+| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | -------- |
+| 0.01334     | 0.03273     | 0.1208      | 0.3029      | 0.8501      | 2.855       | -1.21   |
+
+
+| $\gamma_I$ | $\gamma_X$ | $\lambda_I$ | $\lambda_X$ | $\Sigma_f$ | $\Sigma_a$ | $\sigma_aX$ | power_to_flux |
+| ---------- | ---------- | ----------- | ----------- | ---------- | ---------- | ----------- | ------------- |
+| 0.06386    | 0.00228    | 0.0000293   | 0.0000212   | 0.261181   | 0.416323   | 9.2E-19     | 5.80E-05      |
+
+
 ## Temperature balance 
 
-The coolant is assumed to be incompressible. In a more advanced model, it should be adjusted.
+The coolant is assumed to be in compressible. In a more advanced model, it should be adjusted.
 
 The entire power of the reactor is assumed to be dumped into the coolant gas. At some point, it might be interesting to test radiative cooling.
 
