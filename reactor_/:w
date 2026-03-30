@@ -1,0 +1,82 @@
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+
+class Reactor_module:
+    def __init__(self):
+        """
+        Load kinetics parameters once at initialization.
+        """
+        self.alpha, self.beta, self.Lambda, self.betas, self.lambdas = (
+            self._load_kinetics_parameters(parameter_file)
+        )
+        self.sol = None
+        self.t_eval = None
+
+    def _load_kinetics_paramters(self):
+        """
+        returns alpha, beta, Lambda,
+        betas (as an array from 1-N)
+        lambdas (as an array from 1-N)
+        """
+        # beta	beta1	beta2	beta3	beta4	beta5	beta6	Lambda	lambda1	lambda2	lambda3	lambda4	lambda5	lambda6	alpha
+        data = np.loadtxt(
+            "../Parameter/Kinetics_parameter.csv", delimiter=",", skiprows=1
+        )
+        return data[-1], data[0], data[7], data[1:7], data[8:14]
+
+    def calc_rho(t):
+        # todo add insertion , temp feedback, and xenon
+        if t < 5:
+            return 0
+        else:
+            return 10
+
+    def rhs(self, t, y):
+        rho = self.calc_rho(t)
+        P = y[0]
+        C = y[1:]
+        dPdt = (rho - self.beta) / self.Lambda * P + np.sum(C * self.lambdas)
+        dCdt = self.betas / self.Lambda * P - self.lambdas * C
+        return np.append(dPdt, dCdt)
+
+
+# Time
+t_span = (0, 10)  # integrate from t=0 to t=10
+
+# Parameter
+alpha, beta, Lambda, betas, lambdas = load_kinetics_paramters()
+
+# initial conditions
+Initial_Power = 1
+Initial_C = (betas * Initial_Power) / (Lambda * lambdas)
+
+y0 = np.append(Initial_Power, Initial_C)
+print(y0)
+# Solve it
+sol = solve_ivp(
+    ode_PK,
+    t_span,
+    y0,
+    method="Radau",  # default; change to 'LSODA', 'BDF', etc. for stiff problems
+    rtol=1e-6,
+    atol=1e-8,  # tolerances
+    dense_output=True,
+)  # enables interpolation if you need smooth output
+
+# Results
+print("Success:", sol.success)
+print("Message:", sol.message)
+
+t = np.linspace(t_span[0], t_span[1], 300)
+y = sol.sol(t)  # interpolated solution
+
+plt.plot(t, y[0], label="y1(t)")
+# plt.plot(t, y[1], label="y2(t)")
+
+plt.xlabel("t")
+plt.ylabel("y")
+plt.legend()
+plt.grid(True)
+plt.show()

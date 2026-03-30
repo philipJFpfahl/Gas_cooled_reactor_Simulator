@@ -1,5 +1,5 @@
 This is a simple model for the gas-cooled reactor. It is used to have a working system.
-
+https://github.com/ijs-f8/Research-Reactor-Simulator
 The model is taken from: 
 [[Application of the Method of Manufactured Solutions to a Close-Coupled Gas-Cooled Reactor and Brayton Cycle Power System.pdf]]
 and
@@ -16,11 +16,13 @@ And the turbine side is simplified.
 ![[Pasted image 20260326094400.png]]
 
 The core volume is $7\times 10 ^6$ cm$³$.
+ The nominal power of the reactor is 16MW thermal.
  
-## Reactor Kinetics
+## Reactor Dynamics
 
 
-The power of the reactor is modeled with the PKE:
+
+The power evolution of the reactor is modeled with the PKE:
 
 $$
 \frac{d P(t)}{dt} = \frac{\rho-\beta}{\Lambda} P(t) + \sum_i \lambda_i C_i 
@@ -74,19 +76,19 @@ $$
 \frac{d Xe(t)}{dt} = \gamma_X \Sigma_f \Phi +\lambda_i I(t) - \lambda_x Xe(t)- \sigma_a^X \Phi Xe(t)
 $$
 
-| $\beta$ | $\beta_1$ | $\beta_2$ | $\beta_3$ | $\beta_4$ | $\beta_5$ | $\beta_6$ | $\Lambda$ |     
-| ------- | --------- | --------- | --------- | --------- | --------- | --------- | --------- | 
-| 670.1   | 23.44     | 121       | 115       | 258.8     | 107       | 44.86     | 0.000432  |
+| $\beta$ | $\beta_1$ | $\beta_2$ | $\beta_3$ | $\beta_4$ | $\beta_5$ | $\beta_6$ | $\Lambda$ |     |
+| ------- | --------- | --------- | --------- | --------- | --------- | --------- | --------- | --- |
+| 670.1   | 23.44     | 121       | 115       | 258.8     | 107       | 44.86     | 0.000432  |     |
 
 
-| $\lambda_1$ | $\lambda_2$ | $\lambda_3$ | $\lambda_4$ | $\lambda_5$ | $\lambda_6$ | $\alpha$ |
-| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | -------- |
-| 0.01334     | 0.03273     | 0.1208      | 0.3029      | 0.8501      | 2.855       | -1.21   |
+| $\lambda_1$ s$^{-1}$ | $\lambda_2$s$^{-1}$ | $\lambda_3$s$^{-1}$ | $\lambda_4$s$^{-1}$ | $\lambda_5$s$^{-1}$ | $\lambda_6$s$^{-1}$ | $\alpha$ pcm/K |
+| -------------------- | ------------------- | ------------------- | ------------------- | ------------------- | ------------------- | -------------- |
+| 0.01334              | 0.03273             | 0.1208              | 0.3029              | 0.8501              | 2.855               | -1.21          |
 
 
-| $\gamma_I$ | $\gamma_X$ | $\lambda_I$ | $\lambda_X$ | $\Sigma_f$ | $\Sigma_a$ | $\sigma_aX$ | power_to_flux |
-| ---------- | ---------- | ----------- | ----------- | ---------- | ---------- | ----------- | ------------- |
-| 0.06386    | 0.00228    | 0.0000293   | 0.0000212   | 0.261181   | 0.416323   | 9.2E-19     | 5.80E-05      |
+| $\gamma_I$s$^{-1}$ | $\gamma_X$s$^{-1}$ | $\lambda_I$s$^{-1}$ | $\lambda_X$s$^{-1}$ | $\Sigma_f$cm $^{-1}$ | $\Sigma_a$$^{-1}$ | $\sigma_{aX}$ cm $²$ | power_to_flux |
+| ------------------ | ------------------ | ------------------- | ------------------- | -------------------- | ----------------- | -------------------- | ------------- |
+| 0.06386            | 0.00228            | 0.0000293           | 0.0000212           | 0.261181             | 0.416323          | 9.2E-19              | 5.80E-05      |
 
 
 ## Temperature balance 
@@ -98,16 +100,16 @@ The entire power of the reactor is assumed to be dumped into the coolant gas. At
 In this model, the change in coolant temperature:
 
 $$
-\Delta T = \frac{P(t)}{C_R \dot m_R}
+\Delta T = \frac{P(t)}{c_R \dot m_R}
 $$
 
 with the specific heat capacity of the reactor coolant of $c_R$ and the reactor coolant mass flow rate $\dot m_R$.
 
 So that the temperature at point $R_{out}$
 $$
-T_{Rout} = T_{Rin} +\Delta T = T_{Rin} + \frac{P(t)}{C_R \dot m_R}
+T_{Rout} = T_{Rin} +\Delta T = T_{Rin} + \frac{P(t)}{c_R \dot m_R}
 $$
-
+Since we know the nominal power and we want to have a temperature rise of $55$ K the $c_R \dot m_R$ = 300000 J/Ks
 
 # Battery
 
@@ -119,7 +121,7 @@ $$
 C_B \frac{d T_B}{dt} = \dot Q_{in}-\dot Q_{out}
 $$
 
-With the heat capacity of the battery $C_b$
+With the heat capacity of the battery $C_B$
 
 The heat flow into the battery is the difference of the in and outlet temperature (incopressible). So that 
 
