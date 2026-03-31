@@ -21,11 +21,17 @@ class point_kinetics_solver:
         self.lambdas = None  # lambda1 to lambda6 # 1/second
         # Temperature
         self.Inlet_temp = 373.15  # Kelvin
-        self.Outlet_temp = 373.15
+        self.Outlet_temp = 373.15 + 43 + 1 / 3  # Kelvin
+        self.Reactor_temp = (self.Inlet_temp + self.Outlet_temp) / 2  # Kelvin
+        self.Refference_temp = self.Reactor_temp  # Kelvin
         self.c_pm_R = 300000  # Jules / Kelvin /second
         # opperation PARAMETERS
         self.insertion_func = None  # function
         self.dynamics = False
+        self.Xenon_feedback = False
+        # xenon
+        self.Initial_X = 0
+        self.Initial_I = 0
 
         # solution
         self.PK_solution = None
@@ -33,6 +39,12 @@ class point_kinetics_solver:
     def set_initial_power(self, set_Power):
         self.Initial_Power = set_Power
         self.Power = set_Power
+
+    def set_inlet_temp(self, set_inlet_t):
+        self.Inlet_temp = set_inlet_t
+
+    def set_dynamics(self):
+        self.dynamics = True
 
     def load_kinetics_parameters(self, path="../Parameter/Kinetics_parameter.csv"):
         """
@@ -49,6 +61,17 @@ class point_kinetics_solver:
         self.betas = data[1:7]  # beta1 to beta6
         self.lambdas = data[8:14]  # lambda1 to lambda6
 
+    def calc_outlet_temperature(self):
+        self.Outlet_temp = self.Inlet_temp + self.Power / self.c_pm_R
+
+    def calc_reactor_temperature(self):
+        self.calc_outlet_temperature()
+        self.Reactor_temp = (self.Inlet_temp + self.Outlet_temp) / 2
+
+    def calc_temperature_feedback(self):
+        self.calc_reactor_temperature()
+        return self.alpha * (self.Reactor_temp - self.Refference_temp)
+
     def define_insertion(self, func=None):
         if func is None:
 
@@ -63,17 +86,14 @@ class point_kinetics_solver:
     def get_rho(self, t):
         # todo add insertion , temp feedback, and xenon
         if self.dynamics:
-            return self.insertion_func(t)
+            return self.insertion_func(t) + self.calc_temperature_feedback()
         else:
             return self.insertion_func(t)
 
-    def calc_outlet_temperature(self):
-        self.Outlet_temp = self.Inlet_temp + self.Power / self.c_pm_R
-
     def rhs(self, t, y):
-        rho = self.get_rho(t)
         self.Power = y[0]
         C = y[1:]
+        rho = self.get_rho(t)
         dPdt = (rho - self.beta) / self.Lambda * self.Power + np.sum(C * self.lambdas)
         dCdt = self.betas / self.Lambda * self.Power - self.lambdas * C
         return np.append(dPdt, dCdt)
@@ -82,7 +102,7 @@ class point_kinetics_solver:
         self,
         t_span=(0, 10),
         n_points=1000,
-        method="Radau",
+        method="BDF",  # RADAU seems to be unstable with feedback
         rtol=1e-6,
         atol=1e-8,
     ):
@@ -102,6 +122,7 @@ class point_kinetics_solver:
             t_eval=t_eval,
             dense_output=True,
         )
+
         return self.PK_solution
 
     def get_solution(self, t=None):
@@ -115,16 +136,20 @@ class point_kinetics_solver:
             return t, self.PK_solution.sol(t)
 
     def get_power(self):
-        """Return time and solution (interpolated if t is given)."""
         if self.PK_solution is None:
             raise ValueError("You must call solve() first.")
 
         return self.Power
 
     def get_outlet_temp(self):
-        """Return time and solution (interpolated if t is given)."""
         self.calc_outlet_temperature()
         if self.Outlet_temp is None:
             raise ValueError("You must call solve() first.")
-
         return self.Outlet_temp
+
+    def get_reactor_temp(self):
+        self.calc_reactor_temperature()
+        if self.Reactor_temp is None:
+            raise ValueError("You must call solve() first.")
+
+        return self.Reactor_temp

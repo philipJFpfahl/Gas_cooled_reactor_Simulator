@@ -1,3 +1,4 @@
+from types import DynamicClassAttribute
 import numpy as np
 from scipy.integrate import solve_ivp
 import pytest
@@ -44,7 +45,6 @@ def test_insertion_analytical():
     beta = 670
     Lambda = 0.000432
     lam = 0.01334
-
     assert y[0] == pytest.approx(P(t, rho, beta, Lambda, lam))
 
 
@@ -79,7 +79,38 @@ def test_get_outlet_temperature():
 
     solver = point_kinetics_solver()
     solver.set_initial_power(13000000)
+    solver.set_inlet_temp(400)
     solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
     solver.define_insertion()
     solver.solve()
-    assert solver.get_outlet_temp() == pytest.approx(373.15 + 43 + 1 / 3)
+    assert solver.get_outlet_temp() == pytest.approx(400 + 43 + 1 / 3)
+
+
+def test_get_reactor_temperature():
+    """Regression test: calculate reactor Temperature to a solution."""
+
+    solver = point_kinetics_solver()
+    solver.set_initial_power(13000000)
+    solver.set_inlet_temp(400)
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.define_insertion()
+    solver.solve()
+    assert solver.get_reactor_temp() == pytest.approx((400 + 400 + 43 + 1 / 3) / 2)
+
+
+def test_dynamics():
+    """Test: compares current power with dynamics to a value."""
+
+    def insertion_func(t):
+        if t < 1:
+            return 0
+        else:
+            return 10
+
+    solver = point_kinetics_solver()
+    solver.set_initial_power(13000000)
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.set_dynamics()
+    solver.define_insertion(insertion_func)
+    solver.solve()
+    assert solver.get_power() == pytest.approx(13213066.438692745)
