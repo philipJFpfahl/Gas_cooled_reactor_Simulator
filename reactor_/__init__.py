@@ -4,17 +4,35 @@ import matplotlib.pyplot as plt
 
 
 class point_kinetics_solver:
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         """
         Load kinetics parameters once at initialization.
         """
-        self.alpha = None  # last value
-        self.beta = None
-        self.Lambda = None
+        # Operational Parameter
+        self.Initial_Power = 1  # Watts
+        self.Power = self.Initial_Power
+        # kinetics parameters
+        self.alpha = None  # pcm / Kelvin
+        self.beta = None  # pcm
+        self.Lambda = None  # second
         self.betas = None  # beta1 to beta6
-        self.lambdas = None  # lambda1 to lambda6
-        self.sol = None
-        self.insertion_func = None
+        self.lambdas = None  # lambda1 to lambda6 # 1/second
+        # Temperature
+        self.Inlet_temp = 373.15  # Kelvin
+        self.Outlet_temp = 373.15
+        self.c_pm_R = 300000  # Jules / Kelvin /second
+        # opperation PARAMETERS
+        self.insertion_func = None  # function
+        self.dynamics = False
+
+        # solution
+        self.PK_solution = None
+
+    def set_initial_power(self, set_Power):
+        self.Initial_Power = set_Power
+        self.Power = set_Power
 
     def load_kinetics_parameters(self, path="../Parameter/Kinetics_parameter.csv"):
         """
@@ -31,24 +49,37 @@ class point_kinetics_solver:
         self.betas = data[1:7]  # beta1 to beta6
         self.lambdas = data[8:14]  # lambda1 to lambda6
 
-    def define_insertion(self, func):
-        self.insertion_func = func
+    def define_insertion(self, func=None):
+        if func is None:
+
+            def zero_rho(t):
+                return 0 * t
+
+            self.insertion_func = zero_rho
+
+        else:
+            self.insertion_func = func
 
     def get_rho(self, t):
         # todo add insertion , temp feedback, and xenon
-        return self.insertion_func(t)
+        if self.dynamics:
+            return self.insertion_func(t)
+        else:
+            return self.insertion_func(t)
+
+    def calc_outlet_temperature(self):
+        self.Outlet_temp = self.Inlet_temp + self.Power / self.c_pm_R
 
     def rhs(self, t, y):
         rho = self.get_rho(t)
-        P = y[0]
+        self.Power = y[0]
         C = y[1:]
-        dPdt = (rho - self.beta) / self.Lambda * P + np.sum(C * self.lambdas)
-        dCdt = self.betas / self.Lambda * P - self.lambdas * C
+        dPdt = (rho - self.beta) / self.Lambda * self.Power + np.sum(C * self.lambdas)
+        dCdt = self.betas / self.Lambda * self.Power - self.lambdas * C
         return np.append(dPdt, dCdt)
 
     def solve(
         self,
-        Initial_Power=1,
         t_span=(0, 10),
         n_points=1000,
         method="Radau",
@@ -56,12 +87,12 @@ class point_kinetics_solver:
         atol=1e-8,
     ):
         # initial conditions
-        Initial_C = (self.betas * Initial_Power) / (self.Lambda * self.lambdas)
-        y0 = np.append(Initial_Power, Initial_C)
+        Initial_C = (self.betas * self.Initial_Power) / (self.Lambda * self.lambdas)
+        y0 = np.append(self.Initial_Power, Initial_C)
 
         t_eval = np.linspace(t_span[0], t_span[1], n_points)
 
-        self.sol = solve_ivp(
+        self.PK_solution = solve_ivp(
             fun=self.rhs,
             t_span=t_span,
             y0=y0,
@@ -71,15 +102,29 @@ class point_kinetics_solver:
             t_eval=t_eval,
             dense_output=True,
         )
-
-        return self.sol
+        return self.PK_solution
 
     def get_solution(self, t=None):
         """Return time and solution (interpolated if t is given)."""
-        if self.sol is None:
+        if self.PK_solution is None:
             raise ValueError("You must call solve() first.")
 
         if t is None:
-            return self.sol.t, self.sol.y
+            return self.PK_solution.t, self.PK_solution.y
         else:
-            return t, self.sol.sol(t)
+            return t, self.PK_solution.sol(t)
+
+    def get_power(self):
+        """Return time and solution (interpolated if t is given)."""
+        if self.PK_solution is None:
+            raise ValueError("You must call solve() first.")
+
+        return self.Power
+
+    def get_outlet_temp(self):
+        """Return time and solution (interpolated if t is given)."""
+        self.calc_outlet_temperature()
+        if self.Outlet_temp is None:
+            raise ValueError("You must call solve() first.")
+
+        return self.Outlet_temp

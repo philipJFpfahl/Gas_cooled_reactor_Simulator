@@ -9,13 +9,10 @@ from reactor_ import point_kinetics_solver
 
 
 def test_zero_reactivity_analytical():
+    """Regression test: compares current power to a reference."""
     solver = point_kinetics_solver()
-
-    def rho_zero(t):
-        return t * 0.0
-
+    solver.define_insertion()
     solver.load_kinetics_parameters(path="Parameter/Kinetics_parameter.csv")
-    solver.define_insertion(rho_zero)
     solver.solve()
     _, y = solver.get_solution()
     power = y[0]
@@ -23,7 +20,7 @@ def test_zero_reactivity_analytical():
 
 
 def test_insertion_analytical():
-    """Regression test: compares current solution to a saved reference."""
+    """Regression test: compares current power to a reference."""
 
     def P(t, rho, beta, Lambda, lam):
         return rho / (rho - beta) * np.exp((rho - beta) * t / Lambda) - beta / (
@@ -49,3 +46,40 @@ def test_insertion_analytical():
     lam = 0.01334
 
     assert y[0] == pytest.approx(P(t, rho, beta, Lambda, lam))
+
+
+def test_get_power():
+    """Regression test: compares power evolution to a reference."""
+
+    def P(t, rho, beta, Lambda, lam):
+        return rho / (rho - beta) * np.exp((rho - beta) * t / Lambda) - beta / (
+            rho - beta
+        ) * np.exp(-lam * rho * t / (rho - beta))
+
+    def step_func(t):
+        if t < 0:
+            return 0
+        else:
+            return 10
+
+    solver = point_kinetics_solver()
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.define_insertion(step_func)
+    solver.solve()
+    rho = 10
+    beta = 670
+    Lambda = 0.000432
+    lam = 0.01334
+
+    assert solver.get_power() == pytest.approx(P(10, rho, beta, Lambda, lam))
+
+
+def test_get_outlet_temperature():
+    """Regression test: calculate Temperature rise to a solution."""
+
+    solver = point_kinetics_solver()
+    solver.set_initial_power(13000000)
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.define_insertion()
+    solver.solve()
+    assert solver.get_outlet_temp() == pytest.approx(373.15 + 43 + 1 / 3)

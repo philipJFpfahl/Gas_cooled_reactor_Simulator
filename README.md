@@ -20,7 +20,7 @@ The core volume is $7\times 10 ^6$ cm$³$.
  
 ## Reactor Dynamics
 
-
+The reactor module takes 2 inputs. The controllrod movement and the inlet temperature. 
 
 The power evolution of the reactor is modeled with the PKE:
 
@@ -96,6 +96,8 @@ $$
 The coolant is assumed to be in compressible. In a more advanced model, it should be adjusted.
 
 The entire power of the reactor is assumed to be dumped into the coolant gas. At some point, it might be interesting to test radiative cooling.
+
+There is also the
 
 In this model, the change in coolant temperature:
 
