@@ -114,3 +114,70 @@ def test_dynamics():
     solver.define_insertion(insertion_func)
     solver.solve()
     assert solver.get_power() == pytest.approx(13213066.438692745)
+
+
+def test_xenon_set_steady_state():
+    """Test: compares set steady state Xenon level to a analytical solution."""
+
+    solver = point_kinetics_solver()
+    solver.set_initial_power(1)
+    solver.define_insertion()
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.load_Xenon_parameters(path="Parameter/Xenon_parameter_test.csv")
+    solver.set_initial_X_and_I()
+    solver.solve(t_span=(0, 1))
+    _, y = solver.get_solution(0)
+    assert y[7] == pytest.approx(814.835440)
+
+
+def test_xenon_steady_state():
+    """Test: compares steady state Xenon level to a analytical solution."""
+
+    solver = point_kinetics_solver()
+    solver.set_initial_power(1)
+    solver.define_insertion()
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.load_Xenon_parameters(path="Parameter/Xenon_parameter_test.csv")
+    solver.solve(t_span=(0, 1000000))
+    _, y = solver.get_solution(1000000)
+    assert y[7] == pytest.approx(814.835440)
+
+
+def test_xenon_shutdown():
+    """Test: Tests Xenon level after shutdown."""
+
+    def insertion_func(t):
+        if t < 5:
+            return 0
+        else:
+            return -1000
+
+    solver = point_kinetics_solver()
+    solver.set_initial_power(1e9)
+    solver.define_insertion(func=insertion_func)
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.load_Xenon_parameters(path="Parameter/Xenon_parameter.csv")
+    solver.set_initial_X_and_I()
+    # test for 100h
+    solver.solve(t_span=(0, 10 * 60 * 60))
+    t, y = solver.get_solution(10 * 60 * 60)
+
+    assert y[7] == pytest.approx(5.028635316084359e16)
+
+
+def test_xenon_feedback():
+
+    solver = point_kinetics_solver()
+    solver.set_initial_power(13e6)
+    solver.define_insertion()
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.load_Xenon_parameters(path="Parameter/Xenon_parameter.csv")
+    solver.set_dynamics()
+    solver.set_xenon()
+    # start with no Xenon
+    solver.solve(t_span=(0, 100 * 60 * 60))
+    t, y = solver.get_solution()
+    plt.plot(t, y[0])
+    plt.show()
+    plt.plot(t, y[7])
+    plt.show()

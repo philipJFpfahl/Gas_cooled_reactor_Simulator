@@ -14,11 +14,23 @@ class point_kinetics_solver:
         self.Initial_Power = 1  # Watts
         self.Power = self.Initial_Power
         # kinetics parameters
-        self.alpha = None  # pcm / Kelvin
-        self.beta = None  # pcm
-        self.Lambda = None  # second
-        self.betas = None  # beta1 to beta6
-        self.lambdas = None  # lambda1 to lambda6 # 1/second
+        self.alpha = 0  # pcm / Kelvin
+        self.beta = 0  # pcm
+        self.Lambda = 0  # second
+        self.betas = 0  # beta1 to beta6
+        self.lambdas = 0  # lambda1 to lambda6 # 1/second
+        # Xenon parameters
+        self.gamma_I = 0
+        self.gamma_X = 0
+        self.lambda_I = 0
+        self.lambda_X = 0
+        self.Sigma_f = 0
+        self.Sigma_a = 0
+        self.sigma_aX = 0
+        self.power_to_flux = 0
+        self.X = 0
+        self.Inital_X = 0
+        self.Inital_I = 0
         # Temperature
         self.Inlet_temp = 373.15  # Kelvin
         self.Outlet_temp = 373.15 + 43 + 1 / 3  # Kelvin
@@ -29,9 +41,6 @@ class point_kinetics_solver:
         self.insertion_func = None  # function
         self.dynamics = False
         self.Xenon_feedback = False
-        # xenon
-        self.Initial_X = 0
-        self.Initial_I = 0
 
         # solution
         self.PK_solution = None
@@ -40,11 +49,34 @@ class point_kinetics_solver:
         self.Initial_Power = set_Power
         self.Power = set_Power
 
+    def set_initial_X_and_I(self, set_=None):
+        """set_ expects X and I concentration"""
+        # calc ss solution
+        if set_ is None:
+            self.Inital_I = (
+                self.gamma_I
+                * self.Sigma_f
+                * self.Power
+                * self.power_to_flux
+                / self.lambda_I
+            )
+            self.Inital_X = (
+                self.gamma_X * self.Sigma_f * self.Power * self.power_to_flux
+                + self.lambda_I * self.Inital_I
+            ) / (self.lambda_X + self.sigma_aX * self.Power * self.power_to_flux)
+
+        else:
+            self.Inital_X = set_[0]
+            self.Inital_I = set_[1]
+
     def set_inlet_temp(self, set_inlet_t):
         self.Inlet_temp = set_inlet_t
 
     def set_dynamics(self):
         self.dynamics = True
+
+    def set_xenon(self):
+        self.xenon = True
 
     def load_kinetics_parameters(self, path="../Parameter/Kinetics_parameter.csv"):
         """
@@ -61,6 +93,24 @@ class point_kinetics_solver:
         self.betas = data[1:7]  # beta1 to beta6
         self.lambdas = data[8:14]  # lambda1 to lambda6
 
+    def load_Xenon_parameters(self, path="../Parameter/Xenon_parameter.csv"):
+        """
+        returns the xenon parameters
+        """
+        # beta	beta1	beta2	beta3	beta4	beta5	beta6	Lambda	lksjdföklajsdiklambda1	lambda2	lambda3	lambda4	lambda5	lambda6	alpha
+        data = np.loadtxt(path, delimiter=",", skiprows=1)
+
+        (
+            self.gamma_I,
+            self.gamma_X,
+            self.lambda_I,
+            self.lambda_X,
+            self.Sigma_f,
+            self.Sigma_a,
+            self.sigma_aX,
+            self.power_to_flux,
+        ) = data
+
     def calc_outlet_temperature(self):
         self.Outlet_temp = self.Inlet_temp + self.Power / self.c_pm_R
 
@@ -71,6 +121,9 @@ class point_kinetics_solver:
     def calc_temperature_feedback(self):
         self.calc_reactor_temperature()
         return self.alpha * (self.Reactor_temp - self.Refference_temp)
+
+    def calc_Xenon_feedback(self):
+        return -self.X * self.sigma_aX / self.Sigma_a
 
     def define_insertion(self, func=None):
         if func is None:
@@ -85,18 +138,35 @@ class point_kinetics_solver:
 
     def get_rho(self, t):
         # todo add insertion , temp feedback, and xenon
+        rho = self.insertion_func(t)
+
         if self.dynamics:
-            return self.insertion_func(t) + self.calc_temperature_feedback()
-        else:
-            return self.insertion_func(t)
+            rho += self.calc_temperature_feedback()
+        if self.Xenon_feedback:
+            rho += self.calc_Xenon_feedback()
+
+        return rho
 
     def rhs(self, t, y):
         self.Power = y[0]
-        C = y[1:]
+        C = y[1:7]
+        self.X = y[7]
+        I = y[8]
         rho = self.get_rho(t)
         dPdt = (rho - self.beta) / self.Lambda * self.Power + np.sum(C * self.lambdas)
         dCdt = self.betas / self.Lambda * self.Power - self.lambdas * C
-        return np.append(dPdt, dCdt)
+        dIdt = (
+            self.gamma_I * self.Sigma_f * self.Power * self.power_to_flux
+            - self.lambda_I * I
+        )
+        dXdt = (
+            self.gamma_X * self.Sigma_f * self.Power * self.power_to_flux
+            + self.lambda_I * I
+            - self.lambda_X * self.X
+            - self.sigma_aX * self.Power * self.power_to_flux * self.X
+        )
+
+        return np.concatenate((np.append(dPdt, dCdt), np.array([dXdt, dIdt])))
 
     def solve(
         self,
@@ -109,6 +179,9 @@ class point_kinetics_solver:
         # initial conditions
         Initial_C = (self.betas * self.Initial_Power) / (self.Lambda * self.lambdas)
         y0 = np.append(self.Initial_Power, Initial_C)
+        # add space for Iodine and Xenon
+        y0 = np.append(y0, self.Inital_X)
+        y0 = np.append(y0, self.Inital_I)
 
         t_eval = np.linspace(t_span[0], t_span[1], n_points)
 
