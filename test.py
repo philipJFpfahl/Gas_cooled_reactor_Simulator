@@ -166,18 +166,37 @@ def test_xenon_shutdown():
 
 
 def test_xenon_feedback():
-
+    """Test: Reactor shutdown due to Xenon level."""
     solver = point_kinetics_solver()
     solver.set_initial_power(13e6)
     solver.define_insertion()
     solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
     solver.load_Xenon_parameters(path="Parameter/Xenon_parameter.csv")
-    solver.set_dynamics()
+    # solver.set_dynamics()
     solver.set_xenon()
-    # start with no Xenon
-    solver.solve(t_span=(0, 100 * 60 * 60))
+    solver.solve(t_span=(0, 10 * 60 * 60))
+    t, y = solver.get_solution(10 * 60 * 60)
+    assert y[0] == pytest.approx(17.099465044339095)
+
+
+def test_xenon_feedback_dynamic():
+    """Test: Reactor shutdown due to Xenon level."""
+    solver = point_kinetics_solver()
+    solver.set_initial_power(3e9)
+    solver.define_insertion()
+    solver.load_kinetics_parameters(path="Parameter/one_group_test.csv")
+    solver.load_Xenon_parameters(path="Parameter/Xenon_parameter.csv")
+    # solver.set_dynamics()
+    solver.set_xenon()
+    solver.solve(t_span=(0, 20 * 60 * 60))
     t, y = solver.get_solution()
-    plt.plot(t, y[0])
-    plt.show()
     plt.plot(t, y[7])
     plt.show()
+    plt.plot(t, y[0])
+    solver.set_dynamics()
+    solver.solve(t_span=(0, 20 * 60 * 60))
+    t, y = solver.get_solution(20 * 60 * 60)
+    assert y[0] == pytest.approx(2.8606867655979525e-05)
+
+
+test_xenon_feedback()

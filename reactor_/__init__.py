@@ -76,7 +76,7 @@ class point_kinetics_solver:
         self.dynamics = True
 
     def set_xenon(self):
-        self.xenon = True
+        self.Xenon_feedback = True
 
     def load_kinetics_parameters(self, path="../Parameter/Kinetics_parameter.csv"):
         """
@@ -123,7 +123,7 @@ class point_kinetics_solver:
         return self.alpha * (self.Reactor_temp - self.Refference_temp)
 
     def calc_Xenon_feedback(self):
-        return -self.X * self.sigma_aX / self.Sigma_a
+        return -1e5 * self.X * self.sigma_aX / self.Sigma_a
 
     def define_insertion(self, func=None):
         if func is None:
@@ -145,6 +145,7 @@ class point_kinetics_solver:
         if self.Xenon_feedback:
             rho += self.calc_Xenon_feedback()
 
+        print(rho)
         return rho
 
     def rhs(self, t, y):
